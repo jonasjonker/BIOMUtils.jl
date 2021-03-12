@@ -117,7 +117,61 @@ end
         @test di["observation"]["metadata"]["taxonomy"] == tiny_taxonomy
     end
 
-    @testset "collapse" begin
-        @test 1+1 == 2
+    @testset "collapseBIOM" begin
+        tiny_taxonomy = [
+            "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" 
+            "p__Proteobacteria" "p__Bacteroidetes" "p__Actinobacteria" "p__Actinobacteria" "p__Proteobacteria" "p__Bacteroidetes" "p__Actinobacteria" "p__Actinobacteria" 
+            "c__Betaproteobacteria" "c__[Saprospirae]" "c__MB-A2-108" "c__MB-A2-108" "c__Betaproteobacteria" "c__[Saprospirae]" "c__MB-A2-108" "c__MB-A2-108"  
+            "o__MND1" "o__[Saprospirales]" "o__0319-7L14" "o__0319-7L14" "o__MND1" "o__[Saprospirales]" "o__0319-7L14" "o__0319-7L14" 
+            "f__" "f__Chitinophagaceae" "f__" "f__" "f__" "f__Chitinophagaceae" "f__" "f__"           
+            "g__" "g__" "g__" "g__" "g__" "g__" "g__" "g__" 
+            "s__" "s__" "s__" "s__" "s__" "s__" "s__" "s__"
+        ]
+        tiny_colapsed_taxonomy = [
+            "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria"  
+            "p__Proteobacteria" "p__Bacteroidetes" "p__Actinobacteria" "p__Proteobacteria" "p__Bacteroidetes" "p__Actinobacteria"  
+            "c__Betaproteobacteria" "c__[Saprospirae]" "c__MB-A2-108" "c__Betaproteobacteria" "c__[Saprospirae]" "c__MB-A2-108"   
+            "o__MND1" "o__[Saprospirales]" "o__0319-7L14" "o__MND1" "o__[Saprospirales]" "o__0319-7L14"  
+        ]
+        tiny_colapse_unknown_taxonomy = [
+            "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" 
+            "p__" "p__Bacteroidetes" "p__" "p__Bacteroidetes"  
+            "c__" "c__[Saprospirae]" "c__" "c__[Saprospirae]"   
+            "o__" "o__[Saprospirales]" "o__" "o__[Saprospirales]"  
+            "f__" "f__Chitinophagaceae" "f__" "f__Chitinophagaceae"           
+        ]
+        tiny_df = DataFrame( 
+            data=Array{Float64}([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
+            observation=Array{Int32}([1, 2, 3, 4, 1, 2, 4, 3]), 
+            sample=Array{Int32}([1, 1, 1, 1, 2, 2, 2, 2]) )
+        tiny_collapsed_df = DataFrame( 
+            data=Array{Float64}([1.0, 1.0, 2.0, 1.0, 1.0, 2.0]),
+            observation=Array{Int32}([1, 2, 3, 1, 2, 3]), 
+            sample=Array{Int32}([1, 1, 1, 2, 2, 2]) )
+        tiny_collapse_unknown_df = DataFrame( 
+            data=Array{Float64}([3.0, 1.0, 3.0, 1.0]),
+            observation=Array{Int32}([1, 2, 1, 2]), 
+            sample=Array{Int32}([1, 1, 2, 2]) )
+        
+        metaless_biom         = tempname("data", cleanup=true)
+        fresh_biom            = tempname("data", cleanup=true)
+        collapse_biom         = tempname("data", cleanup=true)
+        collapse_unknown_biom = tempname("data", cleanup=true)
+        writeBIOM(fresh_biom, tiny_df, obs_meta=Dict("taxonomy" => tiny_taxonomy))
+        writeBIOM(metaless_biom, tiny_df)
+        @test_throws KeyError collapseBIOM(metaless_biom, collapse_biom, "taxonomy", on=4)
+        @test_throws BoundsError collapseBIOM(fresh_biom, collapse_biom, "taxonomy", on=8)
+        @test_throws ArgumentError collapseBIOM(fresh_biom, fresh_biom, "taxonomy", on=4)
+        @test_throws ErrorException collapseBIOM(fresh_biom, collapse_biom, "not-taxonomy", on=4)
+        di_fresh = readBIOM(fresh_biom)
+        collapseBIOM(fresh_biom, collapse_biom, "taxonomy", on=4)
+        @test di_fresh == readBIOM(fresh_biom)
+        di_collapse = readBIOM(collapse_biom)
+        @test sum(di_fresh["sample"]["matrix"]["data"]) == sum(di_collapse["sample"]["matrix"]["data"])
+        @test di_fresh["observation"]["metadata"]["taxonomy"] == tiny_taxonomy
+
+        @test di_collapse["sample"]["metadata"]["taxonomy"] == tiny_colapsed_taxonomy
+        @test size(di_collapse["sample"]["metadata"]["taxonomy"]) == size(tiny_colapsed_taxonomy)
+
     end
 end

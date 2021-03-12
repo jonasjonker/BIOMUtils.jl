@@ -4,7 +4,8 @@ using DataFrames
 using HDF5
 using StatsBase
 
-export  isBIOM,
+export  collapseBIOM,  
+        isBIOM,
         readCooccurrence,
         readBIOM,
         writeBIOM

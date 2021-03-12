@@ -102,7 +102,7 @@ function writeBIOM(path::String, df::DataFrame;
                     sample_group_meta::Union{Nothing,Dict{String, <:Any}} = nothing, 
                     obs_meta::Union{Nothing,Dict{String, <:Any}}          = nothing, 
                     obs_group_meta::Union{Nothing,Dict{String, <:Any}}    = nothing)
-    if  ["sample", "observation"] ⊈ names(df)
+    if  ["sample", "observation", "data"] ⊈ names(df)
         Throw(ArgumentError("Something bad happend."))
     end
     dfₒ   = sort(df, :observation)
@@ -146,7 +146,41 @@ function writeBIOM(path::String, df::DataFrame;
 end
 
 
-function collapse()
+function collapseBIOM(biomin::String, biomout::String, field::String; on::Int)
+    if biomin == biomout
+        throw(ArgumentError("Can't change/override/append to biom file."))
+    end
+    if field != "taxonomy"
+        throw(ErrorException("Collapsing on $(field) is not implemented (yet)."))
+    end
+    indict = readBIOM(biomin)
+    if !haskey(indict["observation"]["metadata"], field)
+        throw(KeyError(field))
+    end
+    if size(indict["observation"]["metadata"][field], 1) < on 
+        throw(BoundsError())
+    end
+    df = readCooccurrence(biomin)
+    tax = indict["observation"]["metadata"]["taxonomy"]
+    dftax = hcat(df, convert(DataFrame, permutedims(tax)))
+    remove = Array{Int}([])
+    sort!(dftax, ["x$(on)", :observation])
+    for i in 2:size(dftax,1)
+        if dftax[i,"x$(on)"] == dftax[i-1,"x$(on)"] 
+            dftax[i,:observation] = dftax[i-1,:observation]
+        end
+    end
+    sort!(dftax, [:sample, :observation])
+    for i in 2:size(dftax,1)
+        if dftax[i,:observation] == dftax[i-1,:observation] && dftax[i, :sample] == dftax[i-1, :sample]
+            dftax[i,:data] += dftax[i-1,:data]
+            push!(remove, i-1)
+        end
+    end
+    delete!(dftax, remove)
+    select!(dftax, Not(["x$(i)" for i in (on+1):size(tax,1)]))
+    col_tax = permutedims(convert(Array, select(dftax, Not([:sample, :data, :observation]))))
+    outdict = writeBIOM(biomout, select(dftax, :sample, :data, :observation), sample_meta=Dict("taxonomy" => col_tax))
 end
 
 # function preprocessBIOM!(inpath::String, outpath::String, rel_cutoff::Float64; uncommon_observation=-1)
