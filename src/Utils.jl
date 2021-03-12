@@ -97,7 +97,11 @@ function isBIOM(di::Dict{String, Any})::Bool
 end
 
 
-function writeBIOM(path::String, df::DataFrame)
+function writeBIOM(path::String, df::DataFrame; 
+                    sample_meta::Union{Nothing,Dict{String, <:Any}}       = nothing, 
+                    sample_group_meta::Union{Nothing,Dict{String, <:Any}} = nothing, 
+                    obs_meta::Union{Nothing,Dict{String, <:Any}}          = nothing, 
+                    obs_group_meta::Union{Nothing,Dict{String, <:Any}}    = nothing)
     if  ["sample", "observation"] ⊈ names(df)
         Throw(ArgumentError("Something bad happend."))
     end
@@ -115,14 +119,30 @@ function writeBIOM(path::String, df::DataFrame)
     HDF5.h5write(path, "sample/matrix/data", dataₛ)    
     HDF5.h5write(path, "sample/matrix/indptr", samₛ)    
     HDF5.h5write(path, "sample/matrix/indices",obsₛ)    
-    HDF5.h5write(path, "sample/metadata", Array{String}([]))    
-    HDF5.h5write(path, "sample/group-metadata", Array{String}([]))    
     HDF5.h5write(path, "observation/ids", idₒ)    
     HDF5.h5write(path, "observation/matrix/data", dataₒ)    
     HDF5.h5write(path, "observation/matrix/indptr", obsₒ)    
     HDF5.h5write(path, "observation/matrix/indices", samₒ)    
-    HDF5.h5write(path, "observation/metadata", Array{String}([]))    
-    HDF5.h5write(path, "observation/group-metadata", Array{String}([]))    
+    if sample_meta !== nothing
+        for k in keys(sample_meta)
+            HDF5.h5write(path, "sample/metadata/$(k)", sample_meta[k])    
+        end
+    end
+    if sample_group_meta !== nothing
+        for k in keys(sample_group_meta)
+            HDF5.h5write(path, "sample/group-metadata/$(k)", sample_group_meta[k])    
+        end
+    end
+    if obs_meta !== nothing
+        for k in keys(obs_meta)
+            HDF5.h5write(path, "observation/metadata/$(k)", obs_meta[k])    
+        end
+    end
+    if obs_group_meta !== nothing
+        for k in keys(obs_group_meta)
+            HDF5.h5write(path, "sample/group-metadata/$(k)", obs_group_meta[k])    
+        end
+    end
 end
 
 
