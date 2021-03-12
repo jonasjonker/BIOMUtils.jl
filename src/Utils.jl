@@ -74,19 +74,19 @@ end
 
 function isBIOM(di::Dict{String, Any})::Bool
     k₁ = keys(di)
-    if  length(k₁) != 2 && ["sample", "observation"] .∉ k₁
+    if  length(k₁) != 2 && ["sample", "observation"] ⊆ k₁
         return false
     else
         k₂ₒ = keys(di["observation"])
         k₂ₛ = keys(di["sample"])
-        if  length(k₂ₒ) != 4 && ["ids", "matrix", "metadata", "group-metadata"] .∉ k₂ₒ &&
-            length(k₂ₛ) != 4 && ["ids", "matrix", "metadata", "group-metadata"] .∉ k₂ₛ
+        if  length(k₂ₒ) != 4 && ["ids", "matrix", "metadata", "group-metadata"] ⊆ k₂ₒ &&
+            length(k₂ₛ) != 4 && ["ids", "matrix", "metadata", "group-metadata"] ⊆ k₂ₛ
             return false
         else
             k₃ₒ = keys(di["observation"]["matrix"])
             k₃ₛ = keys(di["sample"]["matrix"])
-            if  length(k₃ₒ) != 3 && ["data", "indptr", "indices"] .∉ k₃ₒ &&
-                length(k₃ₛ) != 3 && ["data", "indptr", "indices"] .∉ k₃ₛ
+            if  length(k₃ₒ) != 3 && ["data", "indptr", "indices"] ⊆ k₃ₒ &&
+                length(k₃ₛ) != 3 && ["data", "indptr", "indices"] ⊆ k₃ₛ
                 return false
             else
                 return true
@@ -97,10 +97,8 @@ function isBIOM(di::Dict{String, Any})::Bool
 end
 
 
-path = "test.biom"
-
 function writeBIOM(path::String, df::DataFrame)
-    if !haskey(df, :sample) || !haskey(df, :observation)
+    if  ["sample", "observation"] ⊈ names(df)
         Throw(ArgumentError("Something bad happend."))
     end
     dfₒ   = sort(df, :observation)
@@ -113,43 +111,22 @@ function writeBIOM(path::String, df::DataFrame)
 	obsₛ  = Array{Int32}(dfₛ.observation)
 	samₛ  = Array{Int32}([[findfirst(==(i), dfₛ.sample)-1 for i in unique(dfₛ.sample)]... , length(dfₛ.sample)])
 	idₛ   = Array{String}(string.(sort(unique(dfₛ.sample))))
-    HDF5.h5write(path, "data/sample/ids", idₛ)    
-    HDF5.h5write(path, "data/sample/matrix/data", dataₛ)    
-    HDF5.h5write(path, "data/sample/matrix/indptr", samₛ)    
-    HDF5.h5write(path, "data/sample/matrix/indices",obsₛ)    
-    # HDF5.h5write(path, "data/sample/metadata", Array([]))    
-    # HDF5.h5write(path, "data/sample/group-metadata", Array([]))    
-    HDF5.h5write(path, "data/observation/ids", idₒ)    
-    HDF5.h5write(path, "data/observation/matrix/data", dataₒ)    
-    HDF5.h5write(path, "data/observation/matrix/indptr", obsₒ)    
-    HDF5.h5write(path, "data/observation/matrix/indices", samₒ)    
-    # HDF5.h5write(path, "data/observation/metadata", Array{}([]))    
-    # HDF5.h5write(path, "data/observation/group-metadata", Array([]))    
+    HDF5.h5write(path, "sample/ids", idₛ)    
+    HDF5.h5write(path, "sample/matrix/data", dataₛ)    
+    HDF5.h5write(path, "sample/matrix/indptr", samₛ)    
+    HDF5.h5write(path, "sample/matrix/indices",obsₛ)    
+    HDF5.h5write(path, "sample/metadata", Array{String}([]))    
+    HDF5.h5write(path, "sample/group-metadata", Array{String}([]))    
+    HDF5.h5write(path, "observation/ids", idₒ)    
+    HDF5.h5write(path, "observation/matrix/data", dataₒ)    
+    HDF5.h5write(path, "observation/matrix/indptr", obsₒ)    
+    HDF5.h5write(path, "observation/matrix/indices", samₒ)    
+    HDF5.h5write(path, "observation/metadata", Array{String}([]))    
+    HDF5.h5write(path, "observation/group-metadata", Array{String}([]))    
 end
 
-function makedf()::DataFrame
-    w = Weights(Array{Float64}([50,50,10,10,10,10,5,5,5,5,5,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]))
-    ex1 = countmap(sample(UnitRange{Int32}(1,30), w, 188))
-    ex2 = countmap(sample(UnitRange{Int32}(1,30), w, 188))
-    ex3 = countmap(sample(UnitRange{Int32}(1,30), w, 188))
-    exes = (ex1, ex2, ex3)
-    df = DataFrame(data=Array{Float64}([]), observation=Array{Int32}([]), sample=Array{Int32}([]))
-    for i in UnitRange{Int32}(1,30)
-        for j in UnitRange{Int32}(1,3)
-            if haskey(exes[j], i)
-                push!(df, (exes[j][i], i, j))
-            end
-        end
-    end
-    return df
-end
 
-df = makedf()
-@show df
-writeBIOM(path, df)
-
-data = HDF5.h5open(path, "r") do h5
-    read(h5)
+function collapse()
 end
 
 # function preprocessBIOM!(inpath::String, outpath::String, rel_cutoff::Float64; uncommon_observation=-1)

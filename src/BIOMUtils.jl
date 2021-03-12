@@ -6,7 +6,8 @@ using StatsBase
 
 export  isBIOM,
         readCooccurrence,
-        readBIOM
+        readBIOM,
+        writeBIOM
 
 include("Utils.jl")
 
