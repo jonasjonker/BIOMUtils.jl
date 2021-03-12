@@ -38,8 +38,9 @@ function readCooccurrence(source::String, sort_on=nothing; abs_cutoff=nothing, r
     end
     #= write data to dataframe =#
     indptr = h5file[x]["matrix"]["indptr"]
-    x_col  = [h5file[y]["ids"][i+1] for i in h5file[x]["matrix"]["indices"]]
-    y_col  = [i-1 for a  in 1:length(indptr)-1 for i in fill(a, indptr[a+1]-indptr[a])] 
+    # x_col  = [parse(Int, h5file[y]["ids"][i+1]) for i in h5file[x]["matrix"]["indices"]]
+    x_col  = [i for i in h5file[x]["matrix"]["indices"]]
+    y_col  = [Int32(i) for a  in 1:length(indptr)-1 for i in fill(a, indptr[a+1]-indptr[a])] 
     data   = h5file[x]["matrix"]["data"]
     if x == "sample"
         df = DataFrame(data = data, observation = x_col, sample = y_col)
@@ -58,6 +59,97 @@ function readCooccurrence(source::String, sort_on=nothing; abs_cutoff=nothing, r
         end
     end
     return df
+end
+
+function readBIOM(path::String)::Dict{String, Any}
+    dict = h5open(path, "r") do h5
+        read(h5)
+    end
+end
+
+function isBIOM(path::String)::Bool
+    di = readBIOM(path)
+    isBIOM(di)
+end
+
+function isBIOM(di::Dict{String, Any})::Bool
+    k₁ = keys(di)
+    if  length(k₁) != 2 && ["sample", "observation"] .∉ k₁
+        return false
+    else
+        k₂ₒ = keys(di["observation"])
+        k₂ₛ = keys(di["sample"])
+        if  length(k₂ₒ) != 4 && ["ids", "matrix", "metadata", "group-metadata"] .∉ k₂ₒ &&
+            length(k₂ₛ) != 4 && ["ids", "matrix", "metadata", "group-metadata"] .∉ k₂ₛ
+            return false
+        else
+            k₃ₒ = keys(di["observation"]["matrix"])
+            k₃ₛ = keys(di["sample"]["matrix"])
+            if  length(k₃ₒ) != 3 && ["data", "indptr", "indices"] .∉ k₃ₒ &&
+                length(k₃ₛ) != 3 && ["data", "indptr", "indices"] .∉ k₃ₛ
+                return false
+            else
+                return true
+            end
+        end
+    end
+
+end
+
+
+path = "test.biom"
+
+function writeBIOM(path::String, df::DataFrame)
+    if !haskey(df, :sample) || !haskey(df, :observation)
+        Throw(ArgumentError("Something bad happend."))
+    end
+    dfₒ   = sort(df, :observation)
+    dfₛ   = sort(df, :sample)
+	dataₒ = Array{Float64}(dfₒ.data)
+	samₒ  = Array{Int32}(dfₒ.sample)
+	obsₒ  = Array{Int32}([[findfirst(==(i), dfₒ.observation)-1 for i in unique(dfₒ.observation)]... , length(dfₒ.observation)])
+	idₒ   = Array{String}(string.(sort(unique(dfₒ.observation))))
+    dataₛ = Array{Float64}(dfₛ.data)
+	obsₛ  = Array{Int32}(dfₛ.observation)
+	samₛ  = Array{Int32}([[findfirst(==(i), dfₛ.sample)-1 for i in unique(dfₛ.sample)]... , length(dfₛ.sample)])
+	idₛ   = Array{String}(string.(sort(unique(dfₛ.sample))))
+    HDF5.h5write(path, "data/sample/ids", idₛ)    
+    HDF5.h5write(path, "data/sample/matrix/data", dataₛ)    
+    HDF5.h5write(path, "data/sample/matrix/indptr", samₛ)    
+    HDF5.h5write(path, "data/sample/matrix/indices",obsₛ)    
+    # HDF5.h5write(path, "data/sample/metadata", Array([]))    
+    # HDF5.h5write(path, "data/sample/group-metadata", Array([]))    
+    HDF5.h5write(path, "data/observation/ids", idₒ)    
+    HDF5.h5write(path, "data/observation/matrix/data", dataₒ)    
+    HDF5.h5write(path, "data/observation/matrix/indptr", obsₒ)    
+    HDF5.h5write(path, "data/observation/matrix/indices", samₒ)    
+    # HDF5.h5write(path, "data/observation/metadata", Array{}([]))    
+    # HDF5.h5write(path, "data/observation/group-metadata", Array([]))    
+end
+
+function makedf()::DataFrame
+    w = Weights(Array{Float64}([50,50,10,10,10,10,5,5,5,5,5,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]))
+    ex1 = countmap(sample(UnitRange{Int32}(1,30), w, 188))
+    ex2 = countmap(sample(UnitRange{Int32}(1,30), w, 188))
+    ex3 = countmap(sample(UnitRange{Int32}(1,30), w, 188))
+    exes = (ex1, ex2, ex3)
+    df = DataFrame(data=Array{Float64}([]), observation=Array{Int32}([]), sample=Array{Int32}([]))
+    for i in UnitRange{Int32}(1,30)
+        for j in UnitRange{Int32}(1,3)
+            if haskey(exes[j], i)
+                push!(df, (exes[j][i], i, j))
+            end
+        end
+    end
+    return df
+end
+
+df = makedf()
+@show df
+writeBIOM(path, df)
+
+data = HDF5.h5open(path, "r") do h5
+    read(h5)
 end
 
 # function preprocessBIOM!(inpath::String, outpath::String, rel_cutoff::Float64; uncommon_observation=-1)

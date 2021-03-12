@@ -4,7 +4,9 @@ using DataFrames
 using HDF5
 using StatsBase
 
-export readCooccurrence
+export  isBIOM,
+        readCooccurrence,
+        readBIOM
 
 include("Utils.jl")
 
