@@ -119,26 +119,26 @@ end
 
     @testset "collapseBIOM" begin
         tiny_taxonomy = [
-            "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" 
-            "p__Proteobacteria" "p__Bacteroidetes" "p__Actinobacteria" "p__Actinobacteria" "p__Proteobacteria" "p__Bacteroidetes" "p__Actinobacteria" "p__Actinobacteria" 
-            "c__Betaproteobacteria" "c__[Saprospirae]" "c__MB-A2-108" "c__MB-A2-108" "c__Betaproteobacteria" "c__[Saprospirae]" "c__MB-A2-108" "c__MB-A2-108"  
-            "o__MND1" "o__[Saprospirales]" "o__0319-7L14" "o__0319-7L14" "o__MND1" "o__[Saprospirales]" "o__0319-7L14" "o__0319-7L14" 
-            "f__" "f__Chitinophagaceae" "f__" "f__" "f__" "f__Chitinophagaceae" "f__" "f__"           
-            "g__" "g__" "g__" "g__" "g__" "g__" "g__" "g__" 
-            "s__" "s__" "s__" "s__" "s__" "s__" "s__" "s__"
+            "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria"
+            "p__Proteobacteria" "p__Bacteroidetes" "p__Actinobacteria" "p__Actinobacteria" "p__Proteobacteria" "p__Bacteroidetes"
+            "c__Betaproteobacteria" "c__[Saprospirae]" "c__MB-A2-108" "c__MB-A2-108" "c__Betaproteobacteria" "c__[Saprospirae]"
+            "o__MND1" "o__[Saprospirales]" "o__0319-7L14" "o__0319-7L14" "o__MND1" "o__[Saprospirales]"
+            "f__" "f__Chitinophagaceae" "f__" "f__" "f__" "f__Chitinophagaceae"
+            "g__" "g__" "g__" "g__" "g__" "g__"
+            "s__" "s__" "s__" "s__" "s__" "s__"
         ]
         tiny_colapsed_taxonomy = [
-            "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria"  
-            "p__Proteobacteria" "p__Bacteroidetes" "p__Actinobacteria" "p__Proteobacteria" "p__Bacteroidetes" "p__Actinobacteria"  
-            "c__Betaproteobacteria" "c__[Saprospirae]" "c__MB-A2-108" "c__Betaproteobacteria" "c__[Saprospirae]" "c__MB-A2-108"   
-            "o__MND1" "o__[Saprospirales]" "o__0319-7L14" "o__MND1" "o__[Saprospirales]" "o__0319-7L14"  
+            "k__Bacteria" "k__Bacteria" "k__Bacteria"
+            "p__Proteobacteria" "p__Bacteroidetes" "p__Actinobacteria"
+            "c__Betaproteobacteria" "c__[Saprospirae]" "c__MB-A2-108"
+            "o__MND1" "o__[Saprospirales]" "o__0319-7L14"
         ]
         tiny_colapse_unknown_taxonomy = [
-            "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" 
-            "p__" "p__Bacteroidetes" "p__" "p__Bacteroidetes"  
-            "c__" "c__[Saprospirae]" "c__" "c__[Saprospirae]"   
-            "o__" "o__[Saprospirales]" "o__" "o__[Saprospirales]"  
-            "f__" "f__Chitinophagaceae" "f__" "f__Chitinophagaceae"           
+            "k__Bacteria" "k__Bacteria"
+            "p__" "p__Bacteroidetes"
+            "c__" "c__[Saprospirae]"
+            "o__" "o__[Saprospirales]"
+            "f__" "f__Chitinophagaceae"
         ]
         tiny_df = DataFrame( 
             data=Array{Float64}([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
@@ -170,8 +170,6 @@ end
         @test sum(di_fresh["sample"]["matrix"]["data"]) == sum(di_collapse["sample"]["matrix"]["data"])
         @test di_fresh["observation"]["metadata"]["taxonomy"] == tiny_taxonomy
 
-        @test di_collapse["sample"]["metadata"]["taxonomy"] == tiny_colapsed_taxonomy
-        @test size(di_collapse["sample"]["metadata"]["taxonomy"]) == size(tiny_colapsed_taxonomy)
-
+        @test di_collapse["sample"]["metadata"]["taxonomy"] == tiny_colapsed_taxonomy[4,:]
     end
 end

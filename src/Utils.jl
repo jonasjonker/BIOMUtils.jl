@@ -147,6 +147,9 @@ end
 
 
 function collapseBIOM(biomin::String, biomout::String, field::String; on::Int)
+    if isfile(biomout)
+        throw(ArgumentError("$(biomout) already exists. Can't overwrite files."))
+    end
     if biomin == biomout
         throw(ArgumentError("Can't change/override/append to biom file."))
     end
@@ -162,11 +165,12 @@ function collapseBIOM(biomin::String, biomout::String, field::String; on::Int)
     end
     df = readCooccurrence(biomin)
     tax = indict["observation"]["metadata"]["taxonomy"]
-    dftax = hcat(df, convert(DataFrame, permutedims(tax)))
+    dftax =  transform!(df, :observation => (x -> tax[on, x.+1]) => :taxonomy)
+    # dftax = hcat(df, convert(DataFrame, permutedims(tax)))
     remove = Array{Int}([])
-    sort!(dftax, ["x$(on)", :observation])
+    sort!(dftax, [:taxonomy, :observation])
     for i in 2:size(dftax,1)
-        if dftax[i,"x$(on)"] == dftax[i-1,"x$(on)"] 
+        if dftax[i,:taxonomy] == dftax[i-1, :taxonomy] 
             dftax[i,:observation] = dftax[i-1,:observation]
         end
     end
@@ -178,8 +182,9 @@ function collapseBIOM(biomin::String, biomout::String, field::String; on::Int)
         end
     end
     delete!(dftax, remove)
-    select!(dftax, Not(["x$(i)" for i in (on+1):size(tax,1)]))
-    col_tax = permutedims(convert(Array, select(dftax, Not([:sample, :data, :observation]))))
+    
+    sort!(dftax, :observation)
+    col_tax = unique(dftax[!, :taxonomy])
     outdict = writeBIOM(biomout, select(dftax, :sample, :data, :observation), sample_meta=Dict("taxonomy" => col_tax))
 end
 
