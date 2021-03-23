@@ -119,26 +119,25 @@ end
 
     @testset "collapseBIOM" begin
         tiny_taxonomy = [
-            "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria" "k__Bacteria"
-            "p__Proteobacteria" "p__Bacteroidetes" "p__Actinobacteria" "p__Actinobacteria" "p__Proteobacteria" "p__Bacteroidetes"
-            "c__Betaproteobacteria" "c__[Saprospirae]" "c__MB-A2-108" "c__MB-A2-108" "c__Betaproteobacteria" "c__[Saprospirae]"
-            "o__MND1" "o__[Saprospirales]" "o__0319-7L14" "o__0319-7L14" "o__MND1" "o__[Saprospirales]"
-            "f__" "f__Chitinophagaceae" "f__" "f__" "f__" "f__Chitinophagaceae"
-            "g__" "g__" "g__" "g__" "g__" "g__"
-            "s__" "s__" "s__" "s__" "s__" "s__"
+            "k__Bacteria"           "k__Bacteria"           "k__Bacteria"       "k__Bacteria"
+            "p__Proteobacteria"     "p__Bacteroidetes"      "p__Actinobacteria" "p__Actinobacteria" 
+            "c__Betaproteobacteria" "c__[Saprospirae]"      "c__MB-A2-108"      "c__MB-A2-108"
+            "o__MND1"               "o__[Saprospirales]"    "o__0319-7L14"      "o__0319-7L15"
+            "f__"                   "f__Chitinophagaceae"   "f__"               "f__"
+            "g__"                   "g__"                   "g__"               "g__"
+            "s__"                   "s__"                   "s__"               "s__"
         ]
         tiny_colapsed_taxonomy = [
-            "k__Bacteria" "k__Bacteria" "k__Bacteria"
-            "p__Proteobacteria" "p__Bacteroidetes" "p__Actinobacteria"
-            "c__Betaproteobacteria" "c__[Saprospirae]" "c__MB-A2-108"
-            "o__MND1" "o__[Saprospirales]" "o__0319-7L14"
+            "k__Bacteria"           "k__Bacteria"           "k__Bacteria"      
+            "p__Proteobacteria"     "p__Bacteroidetes"      "p__Actinobacteria"
+            "c__Betaproteobacteria" "c__[Saprospirae]"      "c__MB-A2-108"     
         ]
         tiny_colapse_unknown_taxonomy = [
-            "k__Bacteria" "k__Bacteria"
-            "p__" "p__Bacteroidetes"
-            "c__" "c__[Saprospirae]"
-            "o__" "o__[Saprospirales]"
-            "f__" "f__Chitinophagaceae"
+            "k__Bacteria"           "k__Bacteria"           "k__Bacteria"       "k__Bacteria"
+            "p__Proteobacteria"     "p__Bacteroidetes"      "p__Actinobacteria" "p__Actinobacteria" 
+            "c__Betaproteobacteria" "c__[Saprospirae]"      "c__MB-A2-108"      "c__MB-A2-108"
+            "o__MND1"               "o__[Saprospirales]"    "o__0319-7L14"      "o__0319-7L15"
+            "f__"                   "f__Chitinophagaceae"   "f__"               "f__"
         ]
         tiny_df = DataFrame( 
             data=Array{Float64}([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
@@ -148,10 +147,6 @@ end
             data=Array{Float64}([1.0, 1.0, 2.0, 1.0, 1.0, 2.0]),
             observation=Array{Int32}([1, 2, 3, 1, 2, 3]), 
             sample=Array{Int32}([1, 1, 1, 2, 2, 2]) )
-        tiny_collapse_unknown_df = DataFrame( 
-            data=Array{Float64}([3.0, 1.0, 3.0, 1.0]),
-            observation=Array{Int32}([1, 2, 1, 2]), 
-            sample=Array{Int32}([1, 1, 2, 2]) )
         
         metaless_biom         = tempname("data", cleanup=true)
         fresh_biom            = tempname("data", cleanup=true)
@@ -159,17 +154,30 @@ end
         collapse_unknown_biom = tempname("data", cleanup=true)
         writeBIOM(fresh_biom, tiny_df, obs_meta=Dict("taxonomy" => tiny_taxonomy))
         writeBIOM(metaless_biom, tiny_df)
-        @test_throws KeyError collapseBIOM(metaless_biom, collapse_biom, "taxonomy", on=4)
-        @test_throws BoundsError collapseBIOM(fresh_biom, collapse_biom, "taxonomy", on=8)
-        @test_throws ArgumentError collapseBIOM(fresh_biom, fresh_biom, "taxonomy", on=4)
-        @test_throws ErrorException collapseBIOM(fresh_biom, collapse_biom, "not-taxonomy", on=4)
-        di_fresh = readBIOM(fresh_biom)
-        collapseBIOM(fresh_biom, collapse_biom, "taxonomy", on=4)
-        @test di_fresh == readBIOM(fresh_biom)
-        di_collapse = readBIOM(collapse_biom)
-        @test sum(di_fresh["sample"]["matrix"]["data"]) == sum(di_collapse["sample"]["matrix"]["data"])
-        @test di_fresh["observation"]["metadata"]["taxonomy"] == tiny_taxonomy
-
-        @test di_collapse["sample"]["metadata"]["taxonomy"] == tiny_colapsed_taxonomy[4,:]
+        @testset "error catching" begin
+            @test_throws KeyError collapseBIOM(metaless_biom, collapse_biom, "taxonomy", on=4)
+            @test_throws BoundsError collapseBIOM(fresh_biom, collapse_biom, "taxonomy", on=8)
+            @test_throws ArgumentError collapseBIOM(fresh_biom, fresh_biom, "taxonomy", on=4)
+            @test_throws ErrorException collapseBIOM(fresh_biom, collapse_biom, "not-taxonomy", on=4)
+        end
+        @testset "collapse doubles" begin
+            di_fresh = readBIOM(fresh_biom)
+            collapseBIOM(fresh_biom, collapse_biom, "taxonomy", on=3)
+            @test di_fresh == readBIOM(fresh_biom)
+            di_collapse = readBIOM(collapse_biom)
+            @test sum(di_fresh["sample"]["matrix"]["data"]) == sum(di_collapse["sample"]["matrix"]["data"])
+            @test di_fresh["observation"]["metadata"]["taxonomy"] == tiny_taxonomy
+            @test di_collapse["sample"]["metadata"]["taxonomy"] == tiny_colapsed_taxonomy[3,:]
+            @test di_collapse["sample"]["matrix"]["data"] == tiny_collapsed_df.data
+        end
+        @testset "keep unknowns" begin 
+            di_fresh = readBIOM(fresh_biom)
+            collapseBIOM(fresh_biom, collapse_unknown_biom, "taxonomy", on=5)
+            di_unknown_collapse = readBIOM(collapse_unknown_biom)
+            @test di_unknown_collapse["sample"]["metadata"]["taxonomy"] == tiny_colapse_unknown_taxonomy[5,:]
+            @test sum(di_fresh["sample"]["matrix"]["data"]) == sum(di_unknown_collapse["sample"]["matrix"]["data"])
+            @test di_unknown_collapse["sample"]["matrix"]["data"] == tiny_df.data
+            @test countmap(di_unknown_collapse["sample"]["matrix"]["indices"]) == countmap(tiny_df.observation)
+        end
     end
 end

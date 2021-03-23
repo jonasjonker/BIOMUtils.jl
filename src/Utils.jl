@@ -165,18 +165,19 @@ function collapseBIOM(biomin::String, biomout::String, field::String; on::Int)
     end
     df = readCooccurrence(biomin)
     tax = indict["observation"]["metadata"]["taxonomy"]
-    dftax =  transform!(df, :observation => (x -> tax[on, x.+1]) => :taxonomy)
-    # dftax = hcat(df, convert(DataFrame, permutedims(tax)))
+    dftax =  transform!(df, :observation => (x -> tax[on, x]) => :taxonomy)
     remove = Array{Int}([])
     sort!(dftax, [:taxonomy, :observation])
     for i in 2:size(dftax,1)
-        if dftax[i,:taxonomy] == dftax[i-1, :taxonomy] 
+        if length(dftax[i, :taxonomy]) > 3 && dftax[i,:taxonomy] == dftax[i-1, :taxonomy] 
             dftax[i,:observation] = dftax[i-1,:observation]
         end
     end
     sort!(dftax, [:sample, :observation])
     for i in 2:size(dftax,1)
-        if dftax[i,:observation] == dftax[i-1,:observation] && dftax[i, :sample] == dftax[i-1, :sample]
+        if dftax[i,:observation] == dftax[i-1,:observation] && 
+            dftax[i, :sample] == dftax[i-1, :sample] && 
+            length(dftax[i, :taxonomy]) > 3
             dftax[i,:data] += dftax[i-1,:data]
             push!(remove, i-1)
         end
@@ -184,7 +185,12 @@ function collapseBIOM(biomin::String, biomout::String, field::String; on::Int)
     delete!(dftax, remove)
     
     sort!(dftax, :observation)
-    col_tax = unique(dftax[!, :taxonomy])
+    col_tax = [dftax[1, :taxonomy]]
+    for i in 2:size(dftax,1)
+        if dftax[i,:observation] != dftax[i-1,:observation]
+            push!(col_tax, dftax[i,:taxonomy])
+        end
+    end
     outdict = writeBIOM(biomout, select(dftax, :sample, :data, :observation), sample_meta=Dict("taxonomy" => col_tax))
 end
 
